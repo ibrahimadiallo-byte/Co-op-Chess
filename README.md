@@ -19,6 +19,22 @@ Built for **Pursuit** cohorts to play each other (one cohort vs. another) as a l
 
 The goal is the **conversation**, not the chess. Beginners get coached in real time; experienced players have to explain their thinking; everyone is invested in the outcome.
 
+## Timer model
+
+Two clocks run at once:
+
+- **Team clock — 30:00 per team, total.** Standard chess-clock semantics: a team's clock counts down only while it's their turn to move (i.e., from the moment the opposing team commits a move until this team commits theirs). Hits zero → team loses on time.
+- **Decider clock — 2:00 per individual, per move.** While the team clock is ticking, the current decider has up to 2 minutes to commit a move. **The team clock keeps ticking the whole time, regardless of decider handoffs.**
+
+When the decider clock hits zero:
+
+1. The seat passes to the **next teammate in the rotation order**, with a fresh 2:00 decider clock.
+2. The previous decider **loses the ability to decide on this move** — but stays in their rotation slot for future moves. Order is fixed at game start and never changes.
+3. The team clock does not pause; it keeps draining.
+4. If everyone on the team cycles through and still no move, the rotation wraps back to the top of the list with another fresh 2:00 each. Eventually either someone moves, or the team's 30:00 hits zero and the team loses on time.
+
+When a move is committed, the rotation pointer for that team advances to **the teammate after whoever actually committed the move** (not after whoever was *originally* up). Then it's the opponent's turn — their team clock starts, their first decider gets a fresh 2:00.
+
 ## MVP scope
 
 | In | Out (for now) |
@@ -72,8 +88,8 @@ Independent pieces — claim one in the team chat before starting:
 | # | Workstream | What it covers |
 | --- | --- | --- |
 | A | **Board & rules** | Skeleton wired in `src/App.tsx` (board renders, drag-to-move, check/mate/draw status). Remaining: promotion piece picker (currently auto-queens), better end-of-game banner, move history. |
-| B | **Team roster** | Left-column sidebar: two teams, player order, highlight the current decider, advance rotation on each move. |
-| C | **Turn timer** | Per-turn countdown, visual urgency states (last 10s, last 3s), expiry behavior (see open questions). |
+| B | **Team roster & rotation** | Left-column sidebar: two teams, player order (fixed at game start, never reorders), highlight the current decider, dim the rest. Owns the rotation logic per the [Timer model](#timer-model): on a committed move, advance pointer to the teammate after whoever actually committed it (not after whoever was originally up). On a within-move skip (decider clock expired), pass the seat to the next teammate and visibly mark the skipped teammate as locked-out *for this move only* — they're back in rotation next time their slot comes around. |
+| C | **Turn timers** | Two clocks: 30:00 team total (counts down only while it's that team's turn), and 2:00 per-decider (resets when a teammate takes the seat). Visual urgency states (last 10 s, last 3 s) on both. Decider-expiry: hand off to next teammate with fresh 2:00, team clock keeps draining. Team-expiry: team loses on time. Configurable seconds-per-team and seconds-per-decider via Workstream D's setup screen. |
 | D | **Game setup screen** | Pre-game form: team names, player lists, team size, seconds-per-turn, who plays white. |
 | E | **End-of-game flow** | Checkmate / stalemate / draw / resignation banners; "play again" / "swap colors" controls. |
 | F | **Layout & polish** | Overall page layout, responsive behavior, hand-off-the-keyboard prompts between turns. |
@@ -99,8 +115,8 @@ coop-chess/
 
 Resolve before someone codes the relevant workstream — flagged so they don't get baked in by accident.
 
-- **Timer expiry behavior** — when the clock hits zero, what happens? Options: (1) decider is forced to make any legal move on their next interaction, (2) team forfeits a piece, (3) random legal move auto-played, (4) extra penalty seconds added then continue. Needs your call.
-- **Decider rotation rule** — does the rotation advance after every team move, or only once per "team rotation cycle"? (i.e., player 1 of Team A → player 2 of Team A → … vs. interleaving with the opposing team's rotation.) Default assumption: advance every time the team moves.
+- ~~**Timer expiry behavior**~~ — **resolved.** See [Timer model](#timer-model). Two clocks: 30:00 team (loss on zero), 2:00 per-decider (hand off to next teammate, keep team clock draining).
+- ~~**Decider rotation rule**~~ — **resolved.** Rotation order is fixed at game start and never changes. A skipped teammate (their 2:00 expired) is locked out only for the current move — they're back in the seat next time their slot comes around.
 - **Reset / undo** — is there a "take back" affordance, or are committed moves final? Default assumption: final, no undo, to preserve the pressure.
 - **Promotion choice** — who picks the promoted piece, the decider or the whole team? Default assumption: the decider, like every other move.
 
