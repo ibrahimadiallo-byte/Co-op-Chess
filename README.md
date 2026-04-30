@@ -1,0 +1,113 @@
+First check Claude.md for coding principles and best practices to apply. Below is a description of this project.
+
+# Co-op Chess
+
+Team-vs-team cooperative chess. Two teams play one board. Each team works together to choose every move — but the individual whose turn it is on the active team has the final say. Turns are timed, so collaboration happens under pressure.
+
+Built for **Pursuit** cohorts to play each other (one cohort vs. another) as a low-stakes, high-energy way to build community across a training program. Mixes seasoned chess players with people who've never moved a pawn.
+
+## How it plays
+
+1. Two teams sit down (3v3, 10v10, 30v30, up to 1000v1000 — the architecture doesn't care).
+2. Each team has a fixed player order. Players take turns in rotation.
+3. When it's a team's turn:
+   - The whole team can discuss, suggest moves, and chime in.
+   - Only the **current player** on that team can actually commit the move.
+   - A countdown timer enforces the turn — discussion has to land on a decision.
+4. The next player on that team rotates into the "decider" seat next time the team's turn comes around.
+5. Standard chess rules from there.
+
+The goal is the **conversation**, not the chess. Beginners get coached in real time; experienced players have to explain their thinking; everyone is invested in the outcome.
+
+## MVP scope
+
+| In | Out (for now) |
+| --- | --- |
+| Working chess board (legal moves, check, checkmate, stalemate) | Player identity validation (anyone at the keyboard can submit the active player's move) |
+| Left-column team list with player order, current decider highlighted | Accounts, login, persistent profiles |
+| Turn lock to the active team's current player | Spectator mode for non-participants |
+| Per-turn countdown timer | Voting / consensus mechanics within a team |
+| Configurable team size — 3v3 / 10v10 / 30v30 (data model handles arbitrary sizes) | Match history, ELO, leaderboards |
+| Single live match | Multiple concurrent matches |
+
+## Stack
+
+MVP runs on **one laptop, in one browser**. Players physically gather around the screen and hand off the keyboard when their turn comes up. No server, no networking, no accounts — that all comes later.
+
+- **Frontend**: React + Vite + TypeScript
+- **Styling**: Tailwind. Drop in [shadcn/ui](https://ui.shadcn.com/) components when we want polished primitives (dialogs, popovers, toggles) — optional, not required up front.
+- **Chess rules**: [`chess.js`](https://github.com/jhlywa/chess.js) — handles every legal-move case (castling, en passant, promotion, threefold repetition, 50-move, checkmate/stalemate). Don't reinvent any of this.
+- **Board UI**: [`react-chessboard`](https://github.com/Clariity/react-chessboard) — drag-and-drop board that pairs cleanly with `chess.js`.
+- **State**: plain React state (`useReducer` for the game, `useState` for UI). Reach for Zustand only if prop drilling gets ugly. The match lives entirely in memory; refreshing the page resets the game. Fine for MVP.
+
+That's the whole stack. No backend until we need one. Future work (Google OAuth, multi-device matches, persistence) gets layered on later — keep the data model clean enough that adding a server is a small change, not a rewrite.
+
+## Getting started
+
+You need **Node 20+** (the repo pins it via `.nvmrc`). If you use [nvm](https://github.com/nvm-sh/nvm), `nvm use` picks it up.
+
+```bash
+git clone https://github.com/ibrahimadiallo-byte/Co-op-Chess.git coop-chess
+cd coop-chess
+npm install
+npm run dev
+```
+
+Open the printed localhost URL (default: <http://localhost:5173>). You should see a chess board with starting position, a placeholder team sidebar on the left, and a "Reset board" button. Drag a piece to test — moves are validated by `chess.js`, and the status line under the title shows whose turn it is.
+
+If `npm run dev` errors out, the most common causes are wrong Node version (`node --version` should print `v20.x.x` or higher) and a stale `node_modules` (delete the folder and re-run `npm install`).
+
+### Other commands
+
+```bash
+npm run build      # type-check and produce a production bundle in dist/
+npm run preview    # serve the production bundle locally
+npm run lint       # run ESLint
+```
+
+## Workstreams
+
+Independent pieces — claim one in the team chat before starting:
+
+| # | Workstream | What it covers |
+| --- | --- | --- |
+| A | **Board & rules** | Skeleton wired in `src/App.tsx` (board renders, drag-to-move, check/mate/draw status). Remaining: promotion piece picker (currently auto-queens), better end-of-game banner, move history. |
+| B | **Team roster** | Left-column sidebar: two teams, player order, highlight the current decider, advance rotation on each move. |
+| C | **Turn timer** | Per-turn countdown, visual urgency states (last 10s, last 3s), expiry behavior (see open questions). |
+| D | **Game setup screen** | Pre-game form: team names, player lists, team size, seconds-per-turn, who plays white. |
+| E | **End-of-game flow** | Checkmate / stalemate / draw / resignation banners; "play again" / "swap colors" controls. |
+| F | **Layout & polish** | Overall page layout, responsive behavior, hand-off-the-keyboard prompts between turns. |
+
+Workstreams B, C, D can be picked up immediately and run in parallel against the existing `App.tsx`. A is mostly done; E and F come once the others are wired together.
+
+### Project layout
+
+```
+coop-chess/
+├── src/
+│   ├── App.tsx        # Top-level component — currently renders the board + sidebar shell
+│   ├── main.tsx       # React entry point
+│   └── index.css      # Tailwind import + base styles
+├── index.html
+├── vite.config.ts     # Vite + Tailwind plugin
+├── tsconfig.*.json
+├── package.json
+└── .nvmrc             # Node version pin
+```
+
+## Open design questions
+
+Resolve before someone codes the relevant workstream — flagged so they don't get baked in by accident.
+
+- **Timer expiry behavior** — when the clock hits zero, what happens? Options: (1) decider is forced to make any legal move on their next interaction, (2) team forfeits a piece, (3) random legal move auto-played, (4) extra penalty seconds added then continue. Needs your call.
+- **Decider rotation rule** — does the rotation advance after every team move, or only once per "team rotation cycle"? (i.e., player 1 of Team A → player 2 of Team A → … vs. interleaving with the opposing team's rotation.) Default assumption: advance every time the team moves.
+- **Reset / undo** — is there a "take back" affordance, or are committed moves final? Default assumption: final, no undo, to preserve the pressure.
+- **Promotion choice** — who picks the promoted piece, the decider or the whole team? Default assumption: the decider, like every other move.
+
+## Status
+
+Hackathon project. Day 0. Goal is a playable 3v3 demo by end of hackathon, with the architecture proven out for larger team sizes.
+
+## Origin
+
+Built during a Pursuit hackathon to give cohorts a playful, recurring way to interact across program boundaries.
