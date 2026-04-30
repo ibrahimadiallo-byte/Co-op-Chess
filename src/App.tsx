@@ -23,6 +23,9 @@ type MatchState = {
   deciderSecondsLeft: number
   teams: Record<TeamColor, TeamState>
   result: string | null
+  gameStarted: boolean
+  teamsReady: Record<TeamColor, boolean>
+  firstMoveMade: boolean
 }
 
 const TEAM_CLOCK_SECONDS = 30 * 60
@@ -32,6 +35,9 @@ const INITIAL_MATCH_STATE: MatchState = {
   activeTeam: 'white',
   deciderSecondsLeft: DECIDER_CLOCK_SECONDS,
   result: null,
+  gameStarted: false,
+  teamsReady: { white: false, black: false },
+  firstMoveMade: false,
   teams: {
     white: {
       color: 'white',
@@ -68,17 +74,17 @@ function App() {
   const activeDecider = getCurrentDecider(activeTeam)
 
   useEffect(() => {
-    if (match.result || game.isGameOver()) return
+    if (match.result || game.isGameOver() || !match.gameStarted || !match.firstMoveMade) return
 
     const timer = window.setInterval(() => {
       setMatch((current) => tickMatchClocks(current))
     }, 1000)
 
     return () => window.clearInterval(timer)
-  }, [game, match.result])
+  }, [game, match.result, match.gameStarted, match.firstMoveMade])
 
   function handlePieceDrop({ sourceSquare, targetSquare }: PieceDropHandlerArgs): boolean {
-    if (match.result || game.isGameOver()) return false
+    if (!match.gameStarted || match.result || game.isGameOver()) return false
     if (!targetSquare) return false
 
     try {
@@ -93,7 +99,11 @@ function App() {
     }
 
     setPosition(game.fen())
-    setMatch((current) => advanceTurnAfterMove(current, game))
+    setMatch((current) => {
+      const isFirstMove = !current.firstMoveMade
+      const nextState = advanceTurnAfterMove(current, game)
+      return isFirstMove ? { ...nextState, firstMoveMade: true } : nextState
+    })
     return true
   }
 
@@ -102,6 +112,57 @@ function App() {
     setPosition(game.fen())
     setMatch(cloneInitialMatchState())
   }
+
+  function setTeamReady(teamColor: TeamColor) {
+    setMatch((current) => {
+      // Lock in ready state once game has started
+      if (current.gameStarted) return current
+      const newTeamsReady = { ...current.teamsReady, [teamColor]: !current.teamsReady[teamColor] }
+      const bothReady = newTeamsReady.white && newTeamsReady.black
+      return {
+        ...current,
+        teamsReady: newTeamsReady,
+        gameStarted: bothReady,
+      }
+    })
+  }
+
+  function setTeamName(teamColor: TeamColor, name: string) {
+    setMatch((current) => {
+      if (current.gameStarted) return current
+      return {
+        ...current,
+        teams: {
+          ...current.teams,
+          [teamColor]: {
+            ...current.teams[teamColor],
+            name: name.slice(0, 30),
+          },
+        },
+      }
+    })
+  }
+
+  function setPlayerName(teamColor: TeamColor, playerId: string, name: string) {
+    setMatch((current) => {
+      if (current.gameStarted) return current
+      return {
+        ...current,
+        teams: {
+          ...current.teams,
+          [teamColor]: {
+            ...current.teams[teamColor],
+            players: current.teams[teamColor].players.map((p) =>
+              p.id === playerId ? { ...p, name: name.slice(0, 25) } : p
+            ),
+          },
+        },
+      }
+    })
+  }
+
+  const bothTeamsReady = match.teamsReady.white && match.teamsReady.black
+  const waitingForFirstMove = match.gameStarted && !match.firstMoveMade
 
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900">
@@ -114,12 +175,17 @@ function App() {
                 key={teamColor}
                 team={match.teams[teamColor]}
                 isActive={match.activeTeam === teamColor && !match.result}
+                isReady={match.teamsReady[teamColor]}
+                onToggleReady={() => setTeamReady(teamColor)}
+                gameStarted={match.gameStarted}
+                onTeamNameChange={(name) => setTeamName(teamColor, name)}
+                onPlayerNameChange={(playerId, name) => setPlayerName(teamColor, playerId, name)}
               />
             ))}
           </div>
         </aside>
 
-        <main className="flex flex-1 flex-col items-center gap-4">
+        <main className="flex flex-1 flex-col items-center gap-4 relative">
           <header className="w-full">
             <h1 className="text-2xl font-semibold">Co-op Chess</h1>
             <p className="text-sm text-slate-500">{describeStatus(game, match)}</p>
@@ -134,13 +200,18 @@ function App() {
                 </p>
               </div>
               <div className="flex gap-4">
-                <Clock label="Team" seconds={activeTeam.teamSecondsLeft} />
-                <Clock label="Decider" seconds={match.deciderSecondsLeft} />
+                <Clock label="Team" seconds={activeTeam.teamSecondsLeft} warning={!waitingForFirstMove && activeTeam.teamSecondsLeft <= 10} />
+                <Clock
+                  label={waitingForFirstMove ? 'Waiting' : 'Decider'}
+                  seconds={match.deciderSecondsLeft}
+                  waiting={waitingForFirstMove}
+                  warning={!waitingForFirstMove && match.deciderSecondsLeft <= 10}
+                />
               </div>
             </div>
           </section>
 
-          <div className="w-full max-w-[560px]">
+          <div className={`w-full max-w-[560px] relative ${!bothTeamsReady ? 'pointer-events-none' : ''}`}>
             <Chessboard
               options={{
                 position,
@@ -148,6 +219,23 @@ function App() {
                 animationDurationInMs: 200,
               }}
             />
+            {!bothTeamsReady && (
+              <div className="absolute inset-0 flex items-center justify-center bg-white/60 backdrop-blur-sm rounded-lg">
+                <div className="text-center">
+                  <p className="text-lg font-semibold text-slate-700">Game Lobby</p>
+                  <p className="text-sm text-slate-500 mt-1">Both teams must ready up</p>
+                </div>
+              </div>
+            )}
+            {waitingForFirstMove && (
+              <div className="absolute inset-0 flex items-center justify-center bg-white/40 backdrop-blur-[2px] rounded-lg pointer-events-none">
+                <div className="text-center bg-white px-6 py-4 rounded-xl shadow-lg border border-slate-200">
+                  <p className="text-lg font-semibold text-emerald-700">Game Started!</p>
+                  <p className="text-sm text-slate-600 mt-1">Waiting for first move...</p>
+                  <p className="text-xs text-slate-500 mt-2">Timers will start when White moves</p>
+                </div>
+              </div>
+            )}
           </div>
 
           <button
@@ -165,19 +253,58 @@ function App() {
 
 const TEAM_ORDER: TeamColor[] = ['white', 'black']
 
-function TeamPanel({ team, isActive }: { team: TeamState; isActive: boolean }) {
+function TeamPanel({
+  team,
+  isActive,
+  isReady,
+  onToggleReady,
+  gameStarted,
+  onTeamNameChange,
+  onPlayerNameChange,
+}: {
+  team: TeamState
+  isActive: boolean
+  isReady: boolean
+  onToggleReady: () => void
+  gameStarted: boolean
+  onTeamNameChange: (name: string) => void
+  onPlayerNameChange: (playerId: string, name: string) => void
+}) {
   const currentDecider = getCurrentDecider(team)
 
   return (
     <section>
       <div className="mb-2 flex items-center justify-between gap-3">
         <div>
-          <h3 className="font-semibold">{team.name}</h3>
+          {!gameStarted ? (
+            <input
+              type="text"
+              value={team.name}
+              onChange={(e) => onTeamNameChange(e.target.value)}
+              className="font-semibold bg-transparent border-b border-slate-300 focus:border-emerald-500 outline-none w-full"
+              maxLength={30}
+            />
+          ) : (
+            <h3 className="font-semibold">{team.name}</h3>
+          )}
           <p className="text-xs uppercase tracking-wide text-slate-500">
             {isActive ? 'On move' : 'Waiting'} · {formatClock(team.teamSecondsLeft)}
           </p>
         </div>
       </div>
+      {!gameStarted && (
+        <button
+          type="button"
+          onClick={onToggleReady}
+          className={`mb-3 w-full rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
+            isReady
+              ? 'bg-emerald-100 text-emerald-800 border border-emerald-300 hover:bg-emerald-200'
+              : 'bg-slate-100 text-slate-700 border border-slate-300 hover:bg-slate-200'
+          }`}
+        >
+          {isReady ? '✓ Ready' : 'Start Match'}
+        </button>
+      )}
       <ol className="space-y-2">
         {team.players.map((player, index) => {
           const isDecider = player.id === currentDecider.id
@@ -193,9 +320,19 @@ function TeamPanel({ team, isActive }: { team: TeamState; isActive: boolean }) {
               } ${isLockedOut ? 'opacity-50' : ''}`}
             >
               <div className="flex items-center justify-between gap-2">
-                <span>
-                  {index + 1}. {player.name}
-                </span>
+                {!gameStarted ? (
+                  <input
+                    type="text"
+                    value={player.name}
+                    onChange={(e) => onPlayerNameChange(player.id, e.target.value)}
+                    className="bg-transparent border-b border-slate-300 focus:border-emerald-500 outline-none w-full text-sm"
+                    maxLength={25}
+                  />
+                ) : (
+                  <span>
+                    {index + 1}. {player.name}
+                  </span>
+                )}
                 {isActive && isDecider ? <span className="text-xs font-medium">Decider</span> : null}
                 {isActive && isLockedOut ? <span className="text-xs font-medium">Skipped</span> : null}
               </div>
@@ -207,11 +344,23 @@ function TeamPanel({ team, isActive }: { team: TeamState; isActive: boolean }) {
   )
 }
 
-function Clock({ label, seconds }: { label: string; seconds: number }) {
+function Clock({
+  label,
+  seconds,
+  waiting,
+  warning,
+}: {
+  label: string
+  seconds: number
+  waiting?: boolean
+  warning?: boolean
+}) {
   return (
     <div className="text-right">
-      <p className="text-xs uppercase tracking-wide text-slate-500">{label}</p>
-      <p className={`font-mono text-lg font-semibold ${seconds <= 10 ? 'text-red-600' : 'text-slate-900'}`}>
+      <p className={`text-xs uppercase tracking-wide ${waiting ? 'text-emerald-600 font-medium' : 'text-slate-500'}`}>
+        {label}
+      </p>
+      <p className={`font-mono text-lg font-semibold ${warning ? 'text-red-600' : waiting ? 'text-emerald-700' : 'text-slate-900'}`}>
         {formatClock(seconds)}
       </p>
     </div>
@@ -343,6 +492,9 @@ function formatClock(seconds: number): string {
 function cloneInitialMatchState(): MatchState {
   return {
     ...INITIAL_MATCH_STATE,
+    gameStarted: false,
+    teamsReady: { white: false, black: false },
+    firstMoveMade: false,
     teams: {
       white: {
         ...INITIAL_MATCH_STATE.teams.white,
