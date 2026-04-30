@@ -1,5 +1,19 @@
 @import "tailwindcss";
 
+:root {
+  --pursuit-purple: #4242ea;
+  --pursuit-carbon: #1e1e1e;
+  --pursuit-stardust: #e3e3e3;
+  --pursuit-yellow: #edff00;
+  --pursuit-white: #ffffff;
+}
+
+@theme {
+  --font-headline: "Galano Grotesque", "Graphik", system-ui, sans-serif;
+  --font-subheadline: "Graphik", system-ui, sans-serif;
+  --font-technical: "Roboto Mono", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+}
+
 html,
 body,
 #root {
@@ -8,5 +22,5 @@ body,
 
 body {
   margin: 0;
-  font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  font-family: "Graphik", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
 }

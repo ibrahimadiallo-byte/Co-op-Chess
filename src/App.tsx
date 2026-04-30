@@ -41,11 +41,11 @@ const INITIAL_MATCH_STATE: MatchState = {
   teams: {
     white: {
       color: 'white',
-      name: 'Pursuit White',
+      name: 'Flushing',
       players: [
-        { id: 'white-1', name: 'White Player 1' },
-        { id: 'white-2', name: 'White Player 2' },
-        { id: 'white-3', name: 'White Player 3' },
+        { id: 'white-1', name: 'Greg' },
+        { id: 'white-2', name: 'An' },
+        { id: 'white-3', name: 'Stef' },
       ],
       deciderIndex: 0,
       lockedOutPlayerIds: [],
@@ -53,11 +53,11 @@ const INITIAL_MATCH_STATE: MatchState = {
     },
     black: {
       color: 'black',
-      name: 'Pursuit Black',
+      name: 'Jackson Heights',
       players: [
-        { id: 'black-1', name: 'Black Player 1' },
-        { id: 'black-2', name: 'Black Player 2' },
-        { id: 'black-3', name: 'Black Player 3' },
+        { id: 'black-1', name: 'Dave' },
+        { id: 'black-2', name: 'Afiya' },
+        { id: 'black-3', name: 'JP' },
       ],
       deciderIndex: 0,
       lockedOutPlayerIds: [],
@@ -165,10 +165,10 @@ function App() {
   const waitingForFirstMove = match.gameStarted && !match.firstMoveMade
 
   return (
-    <div className="min-h-screen bg-slate-50 text-slate-900">
+    <div className="min-h-screen bg-[var(--pursuit-stardust)] text-[var(--pursuit-carbon)]">
       <div className="mx-auto flex max-w-6xl gap-6 p-6">
-        <aside className="w-72 shrink-0 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-          <h2 className="mb-3 text-lg font-semibold">Teams</h2>
+        <aside className="w-72 shrink-0 rounded-2xl border border-[var(--pursuit-carbon)]/10 bg-white p-4 shadow-sm">
+          <h2 className="mb-3 font-headline text-lg font-semibold uppercase">Teams</h2>
           <div className="space-y-5">
             {TEAM_ORDER.map((teamColor) => (
               <TeamPanel
@@ -187,16 +187,19 @@ function App() {
 
         <main className="flex flex-1 flex-col items-center gap-4 relative">
           <header className="w-full">
-            <h1 className="text-2xl font-semibold">Co-op Chess</h1>
-            <p className="text-sm text-slate-500">{describeStatus(game, match)}</p>
+            <h1 className="font-headline text-2xl font-semibold uppercase text-[var(--pursuit-purple)]">
+              Co-op Chess
+            </h1>
+            <p className="font-subheadline text-sm text-[var(--pursuit-carbon)]/70">{describeStatus(game, match)}</p>
           </header>
 
-          <section className="w-full max-w-[560px] rounded-xl border border-slate-200 bg-white p-4 text-sm shadow-sm">
+          <section className="w-full max-w-[560px] rounded-xl border border-[var(--pursuit-carbon)]/10 bg-white p-4 text-sm shadow-sm">
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div>
-                <p className="font-medium">{activeTeam.name} to move</p>
-                <p className="text-slate-500">
-                  Current decider: <span className="font-medium text-slate-800">{activeDecider.name}</span>
+                <p className="font-subheadline font-medium">{activeTeam.name} to move</p>
+                <p className="text-[var(--pursuit-carbon)]/70">
+                  Current decider:{' '}
+                  <span className="font-medium text-[var(--pursuit-carbon)]">{activeDecider.name}</span>
                 </p>
               </div>
               <div className="flex gap-4">
@@ -222,17 +225,17 @@ function App() {
             {!bothTeamsReady && (
               <div className="absolute inset-0 flex items-center justify-center bg-white/60 backdrop-blur-sm rounded-lg">
                 <div className="text-center">
-                  <p className="text-lg font-semibold text-slate-700">Game Lobby</p>
-                  <p className="text-sm text-slate-500 mt-1">Both teams must ready up</p>
+                  <p className="font-subheadline text-lg font-semibold text-[var(--pursuit-carbon)]">Game Lobby</p>
+                  <p className="mt-1 text-sm text-[var(--pursuit-carbon)]/70">Both teams must ready up</p>
                 </div>
               </div>
             )}
             {waitingForFirstMove && (
               <div className="absolute inset-0 flex items-center justify-center bg-white/40 backdrop-blur-[2px] rounded-lg pointer-events-none">
-                <div className="text-center bg-white px-6 py-4 rounded-xl shadow-lg border border-slate-200">
-                  <p className="text-lg font-semibold text-emerald-700">Game Started!</p>
-                  <p className="text-sm text-slate-600 mt-1">Waiting for first move...</p>
-                  <p className="text-xs text-slate-500 mt-2">Timers will start when White moves</p>
+                <div className="rounded-xl border border-[var(--pursuit-carbon)]/10 bg-white px-6 py-4 text-center shadow-lg">
+                  <p className="font-subheadline text-lg font-semibold text-[var(--pursuit-purple)]">Game Started!</p>
+                  <p className="mt-1 text-sm text-[var(--pursuit-carbon)]/80">Waiting for first move...</p>
+                  <p className="mt-2 text-xs text-[var(--pursuit-carbon)]/60">Timers will start when White moves</p>
                 </div>
               </div>
             )}
@@ -241,7 +244,7 @@ function App() {
           <button
             type="button"
             onClick={reset}
-            className="rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-medium hover:bg-slate-100"
+            className="font-technical rounded-lg border border-[var(--pursuit-carbon)] bg-white px-4 py-2 text-sm font-medium hover:bg-[var(--pursuit-yellow)]"
           >
             Reset board
           </button>
@@ -281,13 +284,13 @@ function TeamPanel({
               type="text"
               value={team.name}
               onChange={(e) => onTeamNameChange(e.target.value)}
-              className="font-semibold bg-transparent border-b border-slate-300 focus:border-emerald-500 outline-none w-full"
+              className="w-full border-b border-[var(--pursuit-carbon)]/25 bg-transparent font-subheadline font-semibold outline-none focus:border-[var(--pursuit-purple)]"
               maxLength={30}
             />
           ) : (
             <h3 className="font-semibold">{team.name}</h3>
           )}
-          <p className="text-xs uppercase tracking-wide text-slate-500">
+          <p className="font-technical text-xs uppercase tracking-wide text-[var(--pursuit-carbon)]/65">
             {isActive ? 'On move' : 'Waiting'} · {formatClock(team.teamSecondsLeft)}
           </p>
         </div>
@@ -298,8 +301,8 @@ function TeamPanel({
           onClick={onToggleReady}
           className={`mb-3 w-full rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
             isReady
-              ? 'bg-emerald-100 text-emerald-800 border border-emerald-300 hover:bg-emerald-200'
-              : 'bg-slate-100 text-slate-700 border border-slate-300 hover:bg-slate-200'
+              ? 'border border-[var(--pursuit-purple)] bg-[var(--pursuit-purple)] text-white hover:bg-[var(--pursuit-purple)]/90'
+              : 'border border-[var(--pursuit-carbon)]/20 bg-[var(--pursuit-stardust)] text-[var(--pursuit-carbon)] hover:bg-[var(--pursuit-yellow)]'
           }`}
         >
           {isReady ? '✓ Ready' : 'Start Match'}
@@ -315,8 +318,8 @@ function TeamPanel({
               key={player.id}
               className={`rounded-lg border px-3 py-2 text-sm ${
                 isActive && isDecider
-                  ? 'border-emerald-300 bg-emerald-50 text-emerald-950'
-                  : 'border-slate-200 bg-slate-50 text-slate-700'
+                  ? 'border-[var(--pursuit-purple)] bg-[var(--pursuit-purple)] text-white'
+                  : 'border-[var(--pursuit-carbon)]/10 bg-[var(--pursuit-stardust)] text-[var(--pursuit-carbon)]'
               } ${isLockedOut ? 'opacity-50' : ''}`}
             >
               <div className="flex items-center justify-between gap-2">
@@ -325,7 +328,7 @@ function TeamPanel({
                     type="text"
                     value={player.name}
                     onChange={(e) => onPlayerNameChange(player.id, e.target.value)}
-                    className="bg-transparent border-b border-slate-300 focus:border-emerald-500 outline-none w-full text-sm"
+                    className="w-full border-b border-[var(--pursuit-carbon)]/25 bg-transparent text-sm outline-none focus:border-[var(--pursuit-purple)]"
                     maxLength={25}
                   />
                 ) : (
@@ -357,10 +360,22 @@ function Clock({
 }) {
   return (
     <div className="text-right">
-      <p className={`text-xs uppercase tracking-wide ${waiting ? 'text-emerald-600 font-medium' : 'text-slate-500'}`}>
+      <p
+        className={`font-technical text-xs uppercase tracking-wide ${
+          waiting ? 'font-medium text-[var(--pursuit-purple)]' : 'text-[var(--pursuit-carbon)]/65'
+        }`}
+      >
         {label}
       </p>
-      <p className={`font-mono text-lg font-semibold ${warning ? 'text-red-600' : waiting ? 'text-emerald-700' : 'text-slate-900'}`}>
+      <p
+        className={`font-technical text-lg font-semibold ${
+          warning
+            ? 'text-red-600'
+            : waiting
+              ? 'text-[var(--pursuit-purple)]'
+              : 'text-[var(--pursuit-carbon)]'
+        }`}
+      >
         {formatClock(seconds)}
       </p>
     </div>
